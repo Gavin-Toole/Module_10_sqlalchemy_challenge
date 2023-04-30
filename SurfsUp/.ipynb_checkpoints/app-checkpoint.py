@@ -28,7 +28,8 @@ Base.prepare(autoload_with=engine)
 Measurements = Base.classes.measurement
 Stations = Base.classes.station
 
-
+# Create our session (link) from Python to the DB
+session = Session(engine)
 
 #################################################
 # Flask Setup
@@ -36,6 +37,19 @@ Stations = Base.classes.station
 
 app = Flask(__name__)
 
+
+# Create function for the query period of one year from the most recent date
+# Calculate the date one year from the last date in data set.
+def date():
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+    most_recent = session.query(Measurements.date).order_by(Measurements.date.desc()).first()[0]
+    query_date = datetime.strptime(most_recent,'%Y-%m-%d') - dt.timedelta(days=365)
+
+    # Close out session (link) from Python to the DB
+    session.close()
+    # Reture query_date period
+    return(query_date)
 
 #################################################
 # Flask Routes
@@ -59,14 +73,8 @@ def precip():
     # Create our session (link) from Python to the DB
     session = Session(engine)
 
-    # Calculate query date
-    
-    most_recent = session.query(Measurements.date).order_by(Measurements.date.desc()).first()[0]
-    query_date = datetime.strptime(most_recent,'%Y-%m-%d') - dt.timedelta(days=365)
-
-    #  Query for results using query date
     weather_data = session.query(Measurements.date, Measurements.prcp).\
-    filter(Measurements.date >= query_date).order_by(Measurements.date).all()
+    filter(Measurements.date >= date).order_by(Measurements.date).all()
 
     # Close out session (link) from Python to the DB
     session.close()
@@ -105,15 +113,12 @@ def tobs():
     active_stations = session.query(Measurements.station, func.count(Measurements.id)).\
     group_by(Measurements.station).\
     order_by(func.count(Measurements.id).desc()).all()
-
-    # Calculate query date
-    most_recent = session.query(Measurements.date).order_by(Measurements.date.desc()).first()[0]
-    query_date = datetime.strptime(most_recent,'%Y-%m-%d') - dt.timedelta(days=365)
    
 
-    #  Query database from the total observations for the last year
-    tobs = session.query( Measurements.date, Measurements.tobs).\
-        filter(Measurements.date >= query_date).filter(Measurements.station == active_stations[0][0]).all()
+
+    #  Question data base from the total observations for the last year
+    tobs = session.query(Measurements.station, Measurements.tobs).\
+        filter(Measurements.date >= date).filter(Measurements.station == active_stations[0][0]).all()
 
     # Close out session (link) from Python to the DB
     session.close()
