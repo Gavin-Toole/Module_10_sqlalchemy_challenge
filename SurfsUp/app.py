@@ -72,10 +72,14 @@ def precip():
     session.close()
 
     # Create dictionary for results
-    precip_dict = dict(weather_data)
-
+    precipitation = []
+    for date, prcp in weather_data:
+        precip_dict = {}
+        precip_dict["Date"] = date
+        precip_dict["Precipitation"] = prcp
+        precipitation.append(precip_dict)
     # return jason list of dictionary
-    return jsonify(precip_dict)
+    return jsonify(precipitation)
 
 #  Create second route for station data.
 @app.route("/api/v1.0/stations")
@@ -84,18 +88,26 @@ def stations():
     session = Session(engine)
 
     #  Query database for the stations
-    stations = session.query(Stations.name, Stations.id).all()
+    Station = session.query(Station.station, Station.name, Station.latitude, Station.longitude, Station.elevation).all()
 
     # Close out session (link) from Python to the DB
     session.close()  
 
      # Create dictionary for results
-    stations = dict(stations)
+    stations = []
+    for station,name,latitude,longitude,elevation in Station:
+        station_dict = {}
+        station_dict["Station"] = station
+        station_dict["Name"] = name
+        station_dict["Lat"] = latitude
+        station_dict['Lon'] = longitude
+        station_dict["Elevation"] = elevation
+        stations.append(station_dict)
 
     # return jason list of dictionary
     return jsonify(stations)   
     
-
+#  Create route for most active station yearly data
 @app.route("/api/v1.0/tobs")
 def tobs():
     # Create our session (link) from Python to the DB
@@ -119,54 +131,62 @@ def tobs():
     session.close()
 
     # Create dictionary for results
-    tobs = dict(tobs)
+    tobs = []
+    for date, tobs in tobs:
+        tobs_dict = {}
+        tobs_dict["Date"] = date
+        tobs_dict["Temperature"] = tobs
+        tobs.append(tobs_dict)
 
     # return jason list of dictionary
     return jsonify(tobs)
 
+#  Crete route to summary measurements active stations based on entered start date
 @app.route("/api/v1.0/<start>")
 def get_t_start(start):
     # Create our session (link) from Python to the DB
     session = Session(engine)
 
-    queryresult = session.query(func.min(Measurements.tobs), func.round(func.avg(Measurements.tobs),2),\
+    query_result = session.query(func.min(Measurements.tobs), func.round(func.avg(Measurements.tobs),2),\
      func.round(func.max(Measurements.tobs),2)).filter(Measurements.date >= start).all()
     
     # Close out session (link) from Python to the DB
     session.close()
 
-    tobsall = []
-    for min,avg,max in queryresult:
+# Create dictionary and jsonif
+
+    tobs_sum = []
+    for min,avg,max in query_result:
         tobs_dict = {}
         tobs_dict["Min"] = min
         tobs_dict["Average"] = avg
         tobs_dict["max"] = max
-        tobsall.append(tobs_dict)
+        tobs_sum.append(tobs_dict)
 
-    return jsonify(tobsall)
+    return jsonify(tobs_sum)
 
-
+#  Create route for summary data for active stations based on entering a start and end date
 @app.route('/api/v1.0/<start>/<end>')
 def get_t_start_end(start,end):
    
     # Close out session (link) from Python to the DB
     session = Session(engine)
    
-    queryresult = session.query(func.min(Measurements.tobs), func.round(func.avg(Measurements.tobs),2), func.max(Measurements.tobs)).\
+    query_result = session.query(func.min(Measurements.tobs), func.round(func.avg(Measurements.tobs),2), func.max(Measurements.tobs)).\
         filter(Measurements.date >= start).filter(Measurements.date <= end).all()
    
     # Close out session (link) from Python to the DB
     session.close()
-
-    tobsall = []
-    for min,avg,max in queryresult:
+    # Create dictionary and jsonify 
+    tobs_sum = []
+    for min,avg,max in query_result:
         tobs_dict = {}
         tobs_dict["Min"] = min
         tobs_dict["Average"] = avg
         tobs_dict["Max"] = max
-        tobsall.append(tobs_dict)
+        tobs_sum.append(tobs_dict)
 
-    return jsonify(tobsall)
+    return jsonify(tobs_sum)
 
 
 if __name__ == "__main__":
