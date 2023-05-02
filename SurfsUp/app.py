@@ -41,6 +41,7 @@ app = Flask(__name__)
 # Flask Routes
 #################################################
 
+# Create first route
 @app.route("/")
 def welcome():
     """List all available api routes."""
@@ -53,7 +54,7 @@ def welcome():
         f"Enter a start and end date to view the min, max and average temperatures(yyyy-mm-dd): /api/v1.0/yyyy-mm-dd/yyyy-mm-dd"
     )
 
-# Create first route precipitation data for the last 12 months.
+# Create second route precipitation data for the last 12 months.
 @app.route("/api/v1.0/precipitation")
 def precip():
     # Create our session (link) from Python to the DB
@@ -81,33 +82,33 @@ def precip():
     # return jason list of dictionary
     return jsonify(precipitation)
 
-#  Create second route for station data.
+#  Create third route for station data.
 @app.route("/api/v1.0/stations")
 def stations():
     # Create our session (link) from Python to the DB
     session = Session(engine)
 
     #  Query database for the stations
-    Station = session.query(Station.station, Station.name, Station.latitude, Station.longitude, Station.elevation).all()
+    station_query = session.query(Stations.station, Stations.name, Stations.latitude, Stations.longitude, Stations.elevation).all()
 
     # Close out session (link) from Python to the DB
     session.close()  
 
      # Create dictionary for results
-    stations = []
-    for station,name,latitude,longitude,elevation in Station:
+    summary= []
+    for station,name,latitude,longitude,elevation in station_query:
         station_dict = {}
         station_dict["Station"] = station
         station_dict["Name"] = name
         station_dict["Lat"] = latitude
         station_dict['Lon'] = longitude
         station_dict["Elevation"] = elevation
-        stations.append(station_dict)
-
+        summary.append(station_dict)
+      
     # return jason list of dictionary
-    return jsonify(stations)   
+    return jsonify(summary)   
     
-#  Create route for most active station yearly data
+#  Create forth route for most active station yearly data
 @app.route("/api/v1.0/tobs")
 def tobs():
     # Create our session (link) from Python to the DB
@@ -124,24 +125,24 @@ def tobs():
    
 
     #  Query database from the total observations for the last year
-    tobs = session.query( Measurements.date, Measurements.tobs).\
+    tobs_query = session.query( Measurements.date, Measurements.tobs).\
         filter(Measurements.date >= query_date).filter(Measurements.station == active_stations[0][0]).all()
 
     # Close out session (link) from Python to the DB
     session.close()
 
     # Create dictionary for results
-    tobs = []
-    for date, tobs in tobs:
+    tobs_summary = []
+    for date, tobs in tobs_query:
         tobs_dict = {}
         tobs_dict["Date"] = date
         tobs_dict["Temperature"] = tobs
-        tobs.append(tobs_dict)
+        tobs_summary.append(tobs_dict)
 
     # return jason list of dictionary
-    return jsonify(tobs)
+    return jsonify(tobs_summary)
 
-#  Crete route to summary measurements active stations based on entered start date
+# Crete fifth route to summary measurements active stations based on entered start date
 @app.route("/api/v1.0/<start>")
 def get_t_start(start):
     # Create our session (link) from Python to the DB
@@ -165,7 +166,7 @@ def get_t_start(start):
 
     return jsonify(tobs_sum)
 
-#  Create route for summary data for active stations based on entering a start and end date
+# Create sixth route for summary data for active stations based on entering a start and end date
 @app.route('/api/v1.0/<start>/<end>')
 def get_t_start_end(start,end):
    
